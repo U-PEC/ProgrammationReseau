@@ -1,0 +1,9 @@
+# Environnement virtuel
+.venv/
+__pycache__/
+
+# Sécurité : NE JAMAIS commit la clé privée
+.ssh/
+
+# Fichiers de log ou temporaires
+*.log
