@@ -7,3 +7,4 @@ __pycache__/
 
 # Fichiers de log ou temporaires
 *.log
+users_storage/
