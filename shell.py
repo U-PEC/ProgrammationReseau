@@ -17,24 +17,18 @@ def execute_system_command(command, user_home):
             new_path = os.path.abspath(os.path.join(os.getcwd(), target))
 
             if not new_path.startswith(user_home):
-                return "Error: Access denied (outside of your home directory).
-"
+                return "Error: Access denied (outside of your home directory)."
             
             os.chdir(new_path)
             rel_path = os.path.relpath(new_path, user_home)
-            return f"Current directory: ~/{rel_path if rel_path != '.' else ''}
-"
+            return f"Current directory: ~/{rel_path if rel_path != '.' else ''}"
+
 
         output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
-        return output.replace('
-', '
-')
+        return output.replace('', '')
 
     except Exception as e:
-        return f"Error: {str(e)}
-".replace('
-', '
-')
+        return f"Error: {str(e)}".replace('', '')
 
 def handle_session(chan, user_home):
     """
@@ -43,9 +37,7 @@ def handle_session(chan, user_home):
     # Change to the user's home directory at the start of the session
     os.chdir(user_home)
 
-    chan.send(f"
---- SSH Server (User: {os.path.basename(user_home)}) ---
-")
+    chan.send(f"--- SSH Server (User: {os.path.basename(user_home)}) ---")
     chan.send("ssh-server> ")
     
     command_buffer = ""
@@ -57,7 +49,8 @@ def handle_session(chan, user_home):
             
             char = data.decode('utf-8')
 
-            if char == '':
+            if char == '
+':
                 chan.send("
 ")
                 
