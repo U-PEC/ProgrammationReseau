@@ -54,13 +54,13 @@ ssh-keygen -t rsa -f server.key -N ""
 
 ## 🏃 Lancement du serveur
 
-Exécutez le script principal (assurez-vous que votre fichier se nomme `main.py` ou adaptez le nom) :
+Le code source étant maintenant dans un module (`src`), il doit être lancé comme tel :
 
 ```bash
-python main.py
+python -m src.main
 ```
 
-Le serveur écoutera par défaut sur le port **2222**.
+Le serveur écoutera par défaut sur le port **6767**.
 
 ---
 
@@ -69,7 +69,7 @@ Le serveur écoutera par défaut sur le port **2222**.
 Ouvrez un nouveau terminal et connectez-vous avec la commande `ssh` standard :
 
 ```bash
-ssh admin@localhost -p 2222
+ssh admin@localhost -p 6767
 ```
 
 * **Utilisateur :** `admin`
@@ -81,7 +81,16 @@ ssh admin@localhost -p 2222
 ```text
 .
 ├── .venv/               # Environnement virtuel (non suivi par Git)
-├── server.key           # Clé privée du serveur (générée)
+├── .ssh/                # Clés du serveur
+├── docs/                # Documentation
+├── logs/                # Fichiers de log
+├── users_storage/       # Données des utilisateurs
 ├── requirements.txt     # Liste des dépendances
-└── main.py              # Code source du serveur
+└── src/                 # Code source du serveur
+    ├── __init__.py
+    ├── main.py
+    ├── server.py
+    ├── config.py
+    ├── shell.py
+    └── user_manager.py
 ```
