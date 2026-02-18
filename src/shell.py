@@ -1,89 +1,79 @@
 # server/shell.py
 import os
-import socket
-import subprocess
-
-def execute_system_command(command, user_home):
-    """
-    Executes a command in a sandboxed environment for the user.
-    """
-    command = command.strip()
-    if not command:
-        return ""
-
-    try:
-        if command.startswith("cd "):
-            target = command.split(" ", 1)[1]
-            new_path = os.path.abspath(os.path.join(os.getcwd(), target))
-
-            if not new_path.startswith(user_home):
-                return "Error: Access denied (outside of your home directory)."
-            
-            os.chdir(new_path)
-            rel_path = os.path.relpath(new_path, user_home)
-            return f"Current directory: ~/{rel_path if rel_path != '.' else ''}"
-
-
-        output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
-        return output.replace('', '')
-
-    except Exception as e:
-        return f"Error: {str(e)}".replace('', '')
+import pty
+import selectors
+import termios
+import struct
+import fcntl
+import signal
 
 def handle_session(chan, user_home):
     """
-    Manages the interactive shell for a user.
+    Gère une session shell réelle en utilisant un PTY et un Selector (epoll/kqueue).
     """
-    # Change to the user's home directory at the start of the session
-    os.chdir(user_home)
+    # 1. Création du terminal virtuel (PTY)
+    master_fd, slave_fd = pty.openpty()
 
-    chan.send(f"--- SSH Server (User: {os.path.basename(user_home)}) ---")
-    chan.send("ssh-server> ")
-    
-    command_buffer = ""
-    while True:
+    # 2. Fork du processus pour lancer le vrai Shell
+    pid = os.fork()
+
+    if pid == 0:  # --- PROCESSUS ENFANT ---
+        os.close(master_fd)
+        os.login_tty(slave_fd)
+        
+        # On se place dans le dossier de l'utilisateur
+        os.chdir(user_home)
+        
+        # Lancement du shell système (zsh sur Mac, bash sur Linux)
+        # On définit un environnement minimal pour éviter les bugs
+        env = os.environ.copy()
+        env["TERM"] = "xterm-256color"
+        os.execve('/bin/zsh', ['/bin/zsh', '-i'], env)
+
+    else:  # --- PROCESSUS PARENT (Le serveur SSH) ---
+        os.close(slave_fd)
+        
+        # Configuration du sélecteur (utilisera epoll sur Linux, kqueue sur Mac)
+        sel = selectors.DefaultSelector()
+        
+        # On enregistre le canal SSH et le PTY master pour la lecture
+        sel.register(chan, selectors.EVENT_READ)
+        sel.register(master_fd, selectors.EVENT_READ)
+
+        chan.send(f"\r\n--- Vrai Shell System (Session: {os.path.basename(user_home)}) ---\r\n")
+
         try:
-            data = chan.recv(1024)
-            if not data:
-                break
-            
-            char = data.decode('utf-8')
+            while True:
+                # On attend une activité sur l'un des deux descripteurs
+                events = sel.select(timeout=None)
+                for key, mask in events:
+                    
+                    # CAS A : Données venant du client SSH -> On les écrit dans le PTY
+                    if key.fileobj == chan:
+                        data = chan.recv(1024)
+                        if not data:
+                            return # Déconnexion client
+                        os.write(master_fd, data)
 
-            if char == '
-':
-                chan.send("
-")
-                
-                full_command = command_buffer.strip()
-                
-                if full_command.lower() in ['exit', 'quit']:
-                    chan.send("Disconnecting...
-")
-                    break
-                
-                if full_command:
-                    result = execute_system_command(full_command, user_home)
-                    if result:
-                        chan.send(result)
-                    else:
-                        chan.send("
-")
-                
-                command_buffer = ""
-                chan.send("ssh-server> ")
+                    # CAS B : Données venant du Shell (Zsh) -> On les envoie au client SSH
+                    elif key.fileobj == master_fd:
+                        try:
+                            data = os.read(master_fd, 1024)
+                            if not data:
+                                return # Shell fermé
+                            chan.send(data)
+                        except OSError:
+                            return
 
-            elif char == '
-':
-                continue
-
-            elif char in ['\x7f', '\x08']:  # Handle backspace
-                if len(command_buffer) > 0:
-                    command_buffer = command_buffer[:-1]
-                    chan.send("\b \b")
-
-            elif char.isprintable() or char == ' ':
-                command_buffer += char
-                chan.send(char)
-
-        except (socket.error, EOFError):
-            break
+        except Exception as e:
+            print(f"[-] Erreur dans la boucle de session : {e}")
+        finally:
+            # Ménage
+            sel.unregister(chan)
+            sel.unregister(master_fd)
+            sel.close()
+            os.close(master_fd)
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except:
+                pass

@@ -57,7 +57,7 @@ ssh-keygen -t rsa -f server.key -N ""
 Le code source étant maintenant dans un module (`src`), il doit être lancé comme tel :
 
 ```bash
-python -m src.main
+python -m src
 ```
 
 Le serveur écoutera par défaut sur le port **6767**.
@@ -88,6 +88,7 @@ ssh admin@localhost -p 6767
 ├── requirements.txt     # Liste des dépendances
 └── src/                 # Code source du serveur
     ├── __init__.py
+    ├── __main__.py
     ├── main.py
     ├── server.py
     ├── config.py

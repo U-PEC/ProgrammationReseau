@@ -52,6 +52,3 @@ def run_server():
     while True:
         client, _ = server_socket.accept()
         threading.Thread(target=handle_client, args=(client,), daemon=True).start()
-
-if __name__ == "__main__":
-    run_server()
