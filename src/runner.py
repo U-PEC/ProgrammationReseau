@@ -1,6 +1,7 @@
 import socket
 import threading
 import paramiko
+import re
 
 from .config import IP_ADDR, SOCKET_PORT, CONNEXION_TIMEOUT, SSH_KEY_PATH
 from .server import MyServer
@@ -28,9 +29,14 @@ def handle_client(client_socket):
                 print("[-] Could not retrieve username.")
                 return
 
-            print(f"[+] Session established for user: {username}")
-            user_home = setup_user_environment(username)
-            handle_session(chan, user_home)
+            # Nettoyage du username pour éviter les erreurs de nommage Docker (ex: caractères spéciaux)
+            safe_username = re.sub(r'[^a-zA-Z0-9_.-]', '', username)
+            if not safe_username:
+                safe_username = "default_user"
+
+            print(f"[+] Session established for user: {safe_username}")
+            user_home = setup_user_environment(safe_username)
+            handle_session(chan, safe_username, user_home)
 
     except Exception as e:
         print(f"[-] Client error: {e}")
@@ -52,3 +58,6 @@ def run_server():
     while True:
         client, _ = server_socket.accept()
         threading.Thread(target=handle_client, args=(client,), daemon=True).start()
+
+if __name__ == "__main__":
+    run_server()
