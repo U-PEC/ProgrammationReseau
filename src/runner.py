@@ -5,7 +5,7 @@ import re
 
 from .config import IP_ADDR, SOCKET_PORT, CONNEXION_TIMEOUT, SSH_KEY_PATH
 from .server import MyServer
-from .user_manager import setup_user_environment
+from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
 
 def handle_client(client_socket):
@@ -48,6 +48,9 @@ def run_server():
     """
     Starts the SSH server.
     """
+    # Initialize the database before starting the server
+    init_db()
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((IP_ADDR, SOCKET_PORT))

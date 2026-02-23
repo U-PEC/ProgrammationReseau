@@ -1,6 +1,6 @@
 import paramiko
 import threading
-from .config import USERS
+from .user_manager import authenticate_user
 
 # https://docs.paramiko.org/en/stable/api/server.html
 class MyServer(paramiko.ServerInterface):
@@ -15,7 +15,7 @@ class MyServer(paramiko.ServerInterface):
         """
         Authenticate a user based on a password.
         """
-        if username in USERS and USERS[username] == password:
+        if authenticate_user(username, password):
             self.username = username
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
