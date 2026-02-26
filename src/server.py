@@ -1,6 +1,6 @@
 import paramiko
 import threading
-from .user_manager import authenticate_user
+from .user_manager import authenticate_user, verify_public_key
 
 # https://docs.paramiko.org/en/stable/api/server.html
 class MyServer(paramiko.ServerInterface):
@@ -10,12 +10,27 @@ class MyServer(paramiko.ServerInterface):
     def __init__(self):
         self.event = threading.Event()
         self.username = None  # Will hold the username of the connected user
+    
+    def get_allowed_auths(self, username):
+        """
+        List supported authentication methods.
+        """
+        return 'password,publickey'
 
     def check_auth_password(self, username, password):
         """
         Authenticate a user based on a password.
         """
         if authenticate_user(username, password):
+            self.username = username
+            return paramiko.AUTH_SUCCESSFUL
+        return paramiko.AUTH_FAILED
+    
+    def check_auth_publickey(self, username, key):
+        """
+        Authenticate a user based on a public key.
+        """
+        if verify_public_key(username, key):
             self.username = username
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
