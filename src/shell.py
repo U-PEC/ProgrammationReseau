@@ -4,10 +4,15 @@ import subprocess
 import selectors
 import pty
 import socket
+import uuid
 
 def handle_session(chan, username, user_home):
     # 1. Utiliser le dossier absolu injecté par runner.py pour la persistance
     os.makedirs(user_home, exist_ok=True)
+
+    # Générer un ID unique pour éviter les conflits si l'utilisateur ouvre plusieurs sessions
+    session_id = uuid.uuid4().hex[:8]
+    container_name = f"ssh_session_{username}_{session_id}"
 
     # 2. Préparer la commande Docker
     # -it : Interactif + TTY
@@ -16,7 +21,7 @@ def handle_session(chan, username, user_home):
     # --workdir : Définit le dossier de départ
     docker_cmd = [
         "docker", "run", "-it", "--rm",
-        "--name", f"ssh_session_{username}",
+        "--name", container_name,
         "-v", f"{user_home}:/home/{username}",
         "-w", f"/home/{username}",
         "alpine", "sh"
@@ -65,6 +70,6 @@ def handle_session(chan, username, user_home):
         os.close(master_fd)
         if process.poll() is None:
             # Forcer la suppression du conteneur côté démon Docker pour éviter les conteneurs zombies
-            subprocess.run(["docker", "rm", "-f", f"ssh_session_{username}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["docker", "rm", "-f", container_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             process.terminate()
-        print(f"[*] Conteneur de {username} arrêté proprement.")
+        print(f"[*] Conteneur de {username} ({session_id}) arrêté proprement.")

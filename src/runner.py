@@ -2,11 +2,31 @@ import socket
 import threading
 import paramiko
 import re
+import subprocess
 
 from .config import IP_ADDR, SOCKET_PORT, CONNEXION_TIMEOUT, SSH_KEY_PATH
 from .server import MyServer
 from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
+
+def cleanup_zombie_containers():
+    """
+    Removes any orphaned Docker containers from previous unclean shutdowns.
+    """
+    try:
+        print("[*] Cleaning up orphaned Docker containers...")
+        result = subprocess.run(
+            ["docker", "ps", "-a", "-q", "--filter", "name=ssh_session_"],
+            capture_output=True, text=True
+        )
+        containers = [c for c in result.stdout.strip().split('\n') if c]
+        if containers:
+            subprocess.run(["docker", "rm", "-f"] + containers, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"[+] Removed {len(containers)} orphaned container(s).")
+    except FileNotFoundError:
+        print("[-] Docker is not installed or not found in PATH.")
+    except Exception as e:
+        print(f"[-] Error cleaning up containers: {e}")
 
 def handle_client(client_socket):
     """
@@ -48,6 +68,9 @@ def run_server():
     """
     Starts the SSH server.
     """
+    # Clean up zombie containers left over from sudden crashes
+    cleanup_zombie_containers()
+
     # Initialize the database before starting the server
     init_db()
 
