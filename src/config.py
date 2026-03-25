@@ -1,13 +1,18 @@
 # server/config.py
 import os
+import configparser
 
 # Dynamically get the absolute path to the 'server' root directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Load configuration
+config = configparser.ConfigParser()
+config.read(os.path.join(BASE_DIR, 'server.conf'))
+
 # Network settings
-IP_ADDR = '0.0.0.0'
-SOCKET_PORT = 6767
-CONNEXION_TIMEOUT = 60
+IP_ADDR = config.get('network', 'ip_addr', fallback='0.0.0.0')
+SOCKET_PORT = config.getint('network', 'socket_port', fallback=6767)
+CONNECTION_TIMEOUT = config.getint('network', 'connection_timeout', fallback=60)
 
 # Paths
 SSH_KEY_PATH = os.path.join(BASE_DIR, '.ssh', 'server.key')

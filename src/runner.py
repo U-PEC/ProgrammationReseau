@@ -4,7 +4,7 @@ import paramiko
 import re
 import subprocess
 
-from .config import IP_ADDR, SOCKET_PORT, CONNEXION_TIMEOUT, SSH_KEY_PATH
+from .config import IP_ADDR, SOCKET_PORT, CONNECTION_TIMEOUT, SSH_KEY_PATH
 from .server import MyServer
 from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
@@ -40,9 +40,9 @@ def handle_client(client_socket):
         server = MyServer()
         transport.start_server(server=server)
 
-        chan = transport.accept(CONNEXION_TIMEOUT)
+        channel = transport.accept(CONNECTION_TIMEOUT)
         
-        if chan:
+        if channel:
             server.event.wait(10)
             username = server.username
             if not username:
@@ -56,7 +56,7 @@ def handle_client(client_socket):
 
             print(f"[+] Session established for user: {safe_username}")
             user_home = setup_user_environment(safe_username)
-            handle_session(chan, safe_username, user_home)
+            handle_session(channel, safe_username, user_home)
 
     except Exception as e:
         print(f"[-] Client error: {e}")
