@@ -21,3 +21,7 @@ BASE_STORAGE = os.path.join(BASE_DIR, 'users_storage')
 DB_DIR = os.path.join(BASE_DIR, 'db')
 DB_PATH = os.path.join(DB_DIR, 'users.db')
 INIT_SQL_PATH = os.path.join(DB_DIR, 'data.sql')
+
+# Logging
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+LOG_FILE = os.path.join(LOG_DIR, 'server.log')
