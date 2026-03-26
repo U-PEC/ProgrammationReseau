@@ -5,6 +5,7 @@ import selectors
 import pty
 import socket
 import uuid
+from .logger import logger
 
 def handle_session(channel, username, user_home):
     # 1. Utiliser le dossier absolu injecté par runner.py pour la persistance
@@ -72,4 +73,4 @@ def handle_session(channel, username, user_home):
             # Forcer la suppression du conteneur côté démon Docker pour éviter les conteneurs zombies
             subprocess.run(["docker", "rm", "-f", container_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             docker_process.terminate()
-        print(f"[*] Conteneur de {username} ({session_id}) arrêté proprement.")
+        logger.info(f"Docker container {container_name} stopped and removed.")

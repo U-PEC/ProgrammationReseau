@@ -8,13 +8,14 @@ from .config import IP_ADDR, SOCKET_PORT, CONNECTION_TIMEOUT, SSH_KEY_PATH
 from .server import MyServer
 from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
+from .logger import logger
 
 def cleanup_zombie_containers():
     """
     Removes any orphaned Docker containers from previous unclean shutdowns.
     """
     try:
-        print("[*] Cleaning up orphaned Docker containers...")
+        logger.info("Cleaning up orphaned Docker containers...")
         result = subprocess.run(
             ["docker", "ps", "-a", "-q", "--filter", "name=ssh_session_"],
             capture_output=True, text=True
@@ -22,11 +23,11 @@ def cleanup_zombie_containers():
         containers = [c for c in result.stdout.strip().split('\n') if c]
         if containers:
             subprocess.run(["docker", "rm", "-f"] + containers, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"[+] Removed {len(containers)} orphaned container(s).")
+            logger.info(f"Removed {len(containers)} orphaned container(s).")
     except FileNotFoundError:
-        print("[-] Docker is not installed or not found in PATH.")
+        logger.error("Docker is not installed or not found in PATH.")
     except Exception as e:
-        print(f"[-] Error cleaning up containers: {e}")
+        logger.error(f"Error cleaning up containers: {e}")
 
 def handle_client(client_socket):
     """
@@ -46,7 +47,7 @@ def handle_client(client_socket):
             server.event.wait(10)
             username = server.username
             if not username:
-                print("[-] Could not retrieve username.")
+                logger.warning("Could not retrieve username. Connection aborted.")
                 return
 
             # Nettoyage du username pour éviter les erreurs de nommage Docker (ex: caractères spéciaux)
@@ -54,12 +55,12 @@ def handle_client(client_socket):
             if not safe_username:
                 safe_username = "default_user"
 
-            print(f"[+] Session established for user: {safe_username}")
+            logger.info(f"Session established for user: {safe_username}")
             user_home = setup_user_environment(safe_username)
             handle_session(channel, safe_username, user_home)
 
     except Exception as e:
-        print(f"[-] Client error: {e}")
+        logger.error(f"Client error: {e}")
     finally:
         if transport:
             transport.close()
@@ -79,10 +80,11 @@ def run_server():
     server_socket.bind((IP_ADDR, SOCKET_PORT))
     server_socket.listen(10)
     
-    print(f"[*] Server ready on port {SOCKET_PORT}")
+    logger.info(f"Server ready and listening on {IP_ADDR}:{SOCKET_PORT}")
 
     while True:
         client, _ = server_socket.accept()
+        logger.info(f"Incoming connection from {address[0]}:{address[1]}")
         threading.Thread(target=handle_client, args=(client,), daemon=True).start()
 
 if __name__ == "__main__":
