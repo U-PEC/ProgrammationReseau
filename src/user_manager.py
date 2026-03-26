@@ -40,6 +40,28 @@ def authenticate_user(username, password):
         return True
     return False
 
+
+def verify_public_key(username, key):
+    """Verifies if the provided public key is authorized for the user by checking their authorized_keys file."""
+    user_home = setup_user_environment(username)
+    auth_keys_path = os.path.join(user_home, '.ssh', 'authorized_keys')
+    
+    if not os.path.exists(auth_keys_path):
+        return False
+        
+    with open(auth_keys_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            parts = line.split()
+            if len(parts) >= 2:
+                key_type, key_base64 = parts[0], parts[1]
+                if key.get_name() == key_type and key.get_base64() == key_base64:
+                    return True
+    return False
+
 def setup_user_environment(username):
     """
     Creates a home directory for the user if it doesn't exist.
