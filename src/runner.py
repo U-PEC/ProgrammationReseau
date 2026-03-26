@@ -82,10 +82,15 @@ def run_server():
     
     logger.info(f"Server ready and listening on {IP_ADDR}:{SOCKET_PORT}")
 
-    while True:
-        client, _ = server_socket.accept()
-        logger.info(f"Incoming connection from {address[0]}:{address[1]}")
-        threading.Thread(target=handle_client, args=(client,), daemon=True).start()
+    try:
+        while True:
+            client, address = server_socket.accept()
+            logger.info(f"Incoming connection from {address[0]}:{address[1]}")
+            threading.Thread(target=handle_client, args=(client,), daemon=True).start()
+    except KeyboardInterrupt:
+        logger.info("Server shutting down gracefully (Ctrl+C).")
+    finally:
+        server_socket.close()
 
 if __name__ == "__main__":
     run_server()
