@@ -3,6 +3,7 @@ import os
 import sqlite3
 import hashlib
 from .config import BASE_STORAGE, DB_PATH, DB_DIR, INIT_SQL_PATH
+from .logger import logger
 
 def hash_password(password):
     """Hashes a password using SHA-256."""
@@ -31,13 +32,11 @@ def authenticate_user(username, password):
     """Checks if the provided username and password match the database record."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+    c.execute("SELECT 1 FROM users WHERE username = ? AND password_hash = ?", (username, hash_password(password)))
     row = c.fetchone()
     conn.close()
     
-    if row and row[0] == hash_password(password):
-        return True
-    return False
+    return row is not None
 
 def user_exists(username):
     """Checks if a user exists in the database."""
