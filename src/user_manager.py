@@ -3,7 +3,6 @@ import os
 import sqlite3
 import hashlib
 from .config import BASE_STORAGE, DB_PATH, DB_DIR, INIT_SQL_PATH
-from .logger import logger
 
 def hash_password(password):
     """Hashes a password using SHA-256."""
@@ -25,7 +24,7 @@ def init_db():
                 c.executescript(f.read())
             conn.commit()
         else:
-            logger.warning(f"Init SQL file not found at {INIT_SQL_PATH}. Database created empty.")
+            print(f"[-] Init SQL file not found at {INIT_SQL_PATH}")
     conn.close()
 
 def authenticate_user(username, password):
@@ -40,9 +39,21 @@ def authenticate_user(username, password):
         return True
     return False
 
+def user_exists(username):
+    """Checks if a user exists in the database."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+    exists = c.fetchone() is not None
+    conn.close()
+    return exists
 
 def verify_public_key(username, key):
     """Verifies if the provided public key is authorized for the user by checking their authorized_keys file."""
+    if not user_exists(username):
+        logger.warning(f"Public key authentication failed: User '{username}' does not exist.")
+        return False
+
     user_home = setup_user_environment(username)
     auth_keys_path = os.path.join(user_home, '.ssh', 'authorized_keys')
     
@@ -59,6 +70,7 @@ def verify_public_key(username, key):
             if len(parts) >= 2:
                 key_type, key_base64 = parts[0], parts[1]
                 if key.get_name() == key_type and key.get_base64() == key_base64:
+                    logger.info(f"Public key authentication successful for user '{username}'.")
                     return True
     return False
 
