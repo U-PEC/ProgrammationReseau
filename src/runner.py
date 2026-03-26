@@ -3,12 +3,27 @@ import threading
 import paramiko
 import re
 import subprocess
+import sys
 
 from .config import IP_ADDR, SOCKET_PORT, CONNECTION_TIMEOUT, SSH_KEY_PATH
 from .server import MyServer
 from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
 from .logger import logger
+
+def check_docker_available():
+    """
+    Checks if Docker is installed and the daemon is running.
+    Exits the program if Docker is not available.
+    """
+    try:
+        result = subprocess.run(["docker", "info"], capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.critical("Docker daemon is not running or accessible. Please start Docker before running the server.")
+            sys.exit(1)
+    except FileNotFoundError:
+        logger.critical("Docker is not installed or not found in PATH. Please install Docker.")
+        sys.exit(1)
 
 def cleanup_zombie_containers():
     """
@@ -69,6 +84,9 @@ def run_server():
     """
     Starts the SSH server.
     """
+    # Ensure Docker is available before doing anything else
+    check_docker_available()
+
     # Clean up zombie containers left over from sudden crashes
     cleanup_zombie_containers()
 
