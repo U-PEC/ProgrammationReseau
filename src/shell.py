@@ -1,11 +1,11 @@
 # server/shell.py
 import os
-import subprocess
 import selectors
 import pty
 import socket
 import uuid
 from .logger import logger
+from .docker_utils import start_container, remove_container
 
 def handle_session(channel, username, user_home):
     # 1. Utiliser le dossier absolu injecté par runner.py pour la persistance
@@ -30,13 +30,7 @@ def handle_session(channel, username, user_home):
 
     # 3. Lancer Docker avec un PTY local pour que l'interactivité fonctionne
     master_fd, slave_fd = pty.openpty()
-    docker_process = subprocess.Popen(
-        docker_cmd,
-        stdin=slave_fd,
-        stdout=slave_fd,
-        stderr=slave_fd,
-        preexec_fn=os.setsid # Crée une nouvelle session de processus
-    )
+    docker_process = start_container(container_name, user_home, username, slave_fd)
     os.close(slave_fd)
 
     # 4. Le Pont (Multiplexage)
@@ -71,6 +65,6 @@ def handle_session(channel, username, user_home):
         os.close(master_fd)
         if docker_process.poll() is None:
             # Forcer la suppression du conteneur côté démon Docker pour éviter les conteneurs zombies
-            subprocess.run(["docker", "rm", "-f", container_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            remove_container(container_name)
             docker_process.terminate()
         logger.info(f"Docker container {container_name} stopped and removed.")

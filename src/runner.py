@@ -10,39 +10,7 @@ from .server import MyServer
 from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
 from .logger import logger
-
-def check_docker_available():
-    """
-    Checks if Docker is installed and the daemon is running.
-    Exits the program if Docker is not available.
-    """
-    try:
-        result = subprocess.run(["docker", "info"], capture_output=True, text=True)
-        if result.returncode != 0:
-            logger.critical("Docker daemon is not running or accessible. Please start Docker before running the server.")
-            sys.exit(1)
-    except FileNotFoundError:
-        logger.critical("Docker is not installed or not found in PATH. Please install Docker.")
-        sys.exit(1)
-
-def cleanup_zombie_containers():
-    """
-    Removes any orphaned Docker containers from previous unclean shutdowns.
-    """
-    try:
-        logger.info("Cleaning up orphaned Docker containers...")
-        result = subprocess.run(
-            ["docker", "ps", "-a", "-q", "--filter", "name=ssh_session_"],
-            capture_output=True, text=True
-        )
-        containers = [c for c in result.stdout.strip().split('\n') if c]
-        if containers:
-            subprocess.run(["docker", "rm", "-f"] + containers, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            logger.info(f"Removed {len(containers)} orphaned container(s).")
-    except FileNotFoundError:
-        logger.error("Docker is not installed or not found in PATH.")
-    except Exception as e:
-        logger.error(f"Error cleaning up containers: {e}")
+from .docker_utils import check_docker_available, cleanup_zombie_containers
 
 def handle_client(client_socket):
     """
