@@ -5,7 +5,7 @@ import re
 import subprocess
 import sys
 
-from .config import IP_ADDR, SOCKET_PORT, CONNECTION_TIMEOUT, SSH_KEY_PATH
+from .config import IP_ADDR, SOCKET_PORT, CONNECTION_TIMEOUT, SSH_KEY_PATH, LISTEN_BACKLOG
 from .server import MyServer
 from .user_manager import setup_user_environment, init_db
 from .shell import handle_session
@@ -64,7 +64,7 @@ def run_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((IP_ADDR, SOCKET_PORT))
-    server_socket.listen(10)
+    server_socket.listen(LISTEN_BACKLOG)
     
     logger.info(f"Server ready and listening on {IP_ADDR}:{SOCKET_PORT}")
 

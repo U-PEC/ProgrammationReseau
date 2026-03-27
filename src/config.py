@@ -13,6 +13,7 @@ config.read(os.path.join(BASE_DIR, 'server.conf'))
 IP_ADDR = config.get('network', 'ip_addr', fallback='0.0.0.0')
 SOCKET_PORT = config.getint('network', 'socket_port', fallback=6767)
 CONNECTION_TIMEOUT = config.getint('network', 'connection_timeout', fallback=60)
+LISTEN_BACKLOG = config.getint('network', 'listen_backlog', fallback=10)
 
 # Paths
 SSH_KEY_PATH = os.path.join(BASE_DIR, '.ssh', 'server.key')
