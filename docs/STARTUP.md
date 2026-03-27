@@ -1,97 +1,130 @@
 # 🚀 Guide de démarrage : Serveur SSH avec Paramiko
 
-Ce projet implémente un serveur SSH basique en Python pour le cours de **Réseau Avancé**. Il permet de comprendre la négociation du transport SSH, l'authentification et la gestion des canaux.
+Ce projet fournit un serveur SSH minimal pour apprentissage et tests. Le document ci‑dessous explique l'installation, le démarrage et des notes de portabilité (epoll vs kqueue).
 
 ---
 
-## 🛠️ Installation et Configuration
+## 🛠️ Prérequis
+- Python 3.8+
+- `ssh-keygen` (fourni par OpenSSH)
+- Virtualenv recommandé
 
-### 1. Prérequis
-Assurez-vous d'avoir **Python 3.8+** installé sur votre machine.
+## Création de l'environnement virtuel
 
-### 2. Création de l'environnement virtuel (venv)
-Il est fortement recommandé d'utiliser un environnement virtuel pour isoler les dépendances.
+macOS / Linux :
 
-* **Windows :**
-    ```bash
-    python -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    ```
-* **macOS / Linux :**
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    ```
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-### 3. Installation des dépendances
-Une fois l'environnement activé, installez Paramiko via le fichier `requirements.txt`.
+Windows (PowerShell) :
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+## Installation des dépendances
 
 ```bash
 pip install -r requirements.txt
 ```
 
-> **Contenu du fichier `requirements.txt` :**
-> ```text
-> paramiko>=3.4.0
-> cryptography>=42.0.0
-> ```
+Contenu attendu de `requirements.txt` :
+
+```text
+paramiko>=4.0.0
+cryptography>=42.0.0
+```
 
 ---
 
-## 🔑 Génération de la Clé d'Hôte (Host Key)
+## 🔑 Génération de la clé d'hôte (host key)
 
-Pour que le serveur SSH puisse s'identifier auprès des clients, il a besoin d'une clé RSA privée. Générez-la avec la commande suivante dans votre terminal :
+Le serveur doit disposer d'une clé privée pour s'identifier auprès des clients. Depuis la racine du projet :
 
 ```bash
 ssh-keygen -t rsa -f server.key -N ""
 ```
 
-* `-t rsa` : Type de clé (RSA).
-* `-f server.key` : Nom du fichier de sortie.
-* `-N ""` : Mot de passe vide (passphrase).
+Placez `server.key` dans le dossier racine du projet (même répertoire que `requirements.txt`). Le fichier public `server.key.pub` est généré automatiquement.
 
 ---
 
-## 🏃 Lancement du serveur
+## 🏃 Démarrage du serveur
 
-Le code source étant maintenant dans un module (`src`), il doit être lancé comme tel :
+Depuis la racine du projet :
 
 ```bash
+source .venv/bin/activate
 python -m src
 ```
 
-Le serveur écoutera par défaut sur le port **6767**.
+Par défaut le serveur écoute sur le port `6767`. Voir `src/config.py` si vous souhaitez changer le port ou l'adresse d'écoute.
 
 ---
 
-## 🧪 Tester la connexion
+## 🔎 Tester la connexion
 
-Ouvrez un nouveau terminal et connectez-vous avec la commande `ssh` standard :
+Ouvrez un autre terminal et connectez‑vous :
 
 ```bash
 ssh admin@localhost -p 6767
 ```
 
-* **Utilisateur :** `admin`
-* **Mot de passe :** `password123`
+Compte de test inclus : `admin` (mot de passe `password123`) — voir `users_storage/`.
 
 ---
 
-## 📁 Structure du projet
-```text
-.
-├── .venv/               # Environnement virtuel (non suivi par Git)
-├── .ssh/                # Clés du serveur
-├── docs/                # Documentation
-├── logs/                # Fichiers de log
-├── users_storage/       # Données des utilisateurs
-├── requirements.txt     # Liste des dépendances
-└── src/                 # Code source du serveur
-    ├── __init__.py
+## 🧭 Epoll, selectors et portabilité
+
+- `epoll` est l'API Linux recommandée pour gérer efficacement un grand nombre de sockets.
+- macOS / BSD utilisent `kqueue` au lieu d'`epoll`.
+- Le module Python `selectors` offre une interface portable : `selectors.DefaultSelector()` sélectionne automatiquement `EpollSelector` sur Linux ou `KqueueSelector` sur macOS.
+
+Recommandations :
+- Pour le développement local sur macOS, utiliser `selectors.DefaultSelector()` suffit.
+- Si l'évaluation exige explicitement `epoll`, exécutez le serveur sur une machine Linux (VM/Docker) et activez `selectors.EpollSelector()` si nécessaire.
+
+Exemple rapide d'utilisation :
+
+```python
+import selectors
+sel = selectors.DefaultSelector()
+```
+
+---
+
+## 🛠️ Dépannage
+
+- Connexion refusée : vérifier que `python -m src` tourne et que le port `6767` est ouvert.
+- Clé d'hôte manquante : générez `server.key` comme indiqué ci‑dessus.
+- Erreurs d'authentification : consultez `users_storage/` et `logs/`.
+
+---
+
+## 📁 Structure du projet (résumé)
+
+```
+.  # racine du projet
+├── server.key           # clé d'hôte (générée)
+├── requirements.txt
+├── docs/
+│   ├── STARTUP.md
+│   ├── USAGE.md
+│   ├── PROJECT_OVERVIEW.md
+│   └── TECHNICAL_DOCS.md
+├── logs/
+├── users_storage/
+└── src/
     ├── __main__.py
-    ├── main.py
     ├── server.py
-    ├── config.py
+    ├── runner.py
     ├── shell.py
     └── user_manager.py
 ```
+
+---
+
+Si vous voulez que j'ajoute une commande `docker-compose` pour exécuter le serveur dans un conteneur Linux (utile pour tester `epoll`), dites‑le et je la prépare.
